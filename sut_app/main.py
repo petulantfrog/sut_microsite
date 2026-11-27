@@ -229,7 +229,7 @@ def contacts_page(request: Request):
     session, _ = require_app_session(request)
     with database.connect() as connection:
         rows = connection.execute(
-            "SELECT first_name, email, opt_in_status FROM contacts ORDER BY first_name COLLATE NOCASE, email"
+            "SELECT id, first_name, email, opt_in_status FROM contacts ORDER BY first_name COLLATE NOCASE, email"
         ).fetchall()
     return templates.TemplateResponse(
         request=request,
@@ -248,7 +248,7 @@ def add_contact(request: Request, contact: ContactInput):
     require_app_csrf(request, session)
     try:
         with database.connect() as connection:
-            connection.execute(
+            cursor = connection.execute(
                 "INSERT INTO contacts (email, first_name, opt_in_status) VALUES (?, ?, ?)",
                 (str(contact.email), contact.first_name, contact.opt_in_status),
             )
@@ -256,7 +256,18 @@ def add_contact(request: Request, contact: ContactInput):
         if "UNIQUE constraint failed: contacts.email" in str(error):
             raise HTTPException(status_code=409, detail="A contact with that email already exists") from error
         raise
-    return contact.model_dump(mode="json")
+    return {"id": cursor.lastrowid, **contact.model_dump(mode="json")}
+
+
+@app.delete("/contacts/{contact_id}")
+def delete_contact(contact_id: int, request: Request):
+    session, _ = require_app_session(request)
+    require_app_csrf(request, session)
+    with database.connect() as connection:
+        cursor = connection.execute("DELETE FROM contacts WHERE id = ?", (contact_id,))
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    return {"deleted": True, "id": contact_id}
 
 
 @app.get("/login", response_class=HTMLResponse)

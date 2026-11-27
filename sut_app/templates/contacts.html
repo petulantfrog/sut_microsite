@@ -4,19 +4,24 @@
 
 {% block styles %}
   <style>
-    .add-contact-card { margin-top: 26px; padding: 20px; border: 1px solid var(--line); border-radius: 7px; background: var(--white); }
-    .add-contact-card h2 { margin: 0 0 6px; font: 700 16px "Manrope", sans-serif; }
-    .add-contact-card > p { margin: 0; color: var(--muted); font-size: 12px; }
+    .add-contact-dialog { width: min(620px, calc(100% - 32px)); max-height: calc(100% - 32px); padding: 22px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); }
+    .add-contact-dialog::backdrop { background: rgb(48 16 33 / 45%); }
+    .add-contact-dialog h2 { margin: 0 0 6px; font: 700 16px "Manrope", sans-serif; }
+    .add-contact-dialog > p { margin: 0; color: var(--muted); font-size: 12px; }
     .add-contact-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
     .add-contact-fields label { display: grid; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 700; }
     .add-contact-fields input, .add-contact-fields select { min-width: 0; padding: 10px 11px; border: 1px solid var(--line); border-radius: 6px; background: var(--white); color: var(--ink); font: 500 13px "DM Sans", sans-serif; }
-    .add-contact-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 15px; }
+    .add-contact-footer { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 18px; }
     .contact-form-status { margin: 0; color: var(--muted); font-size: 12px; }
     .contact-form-status.error { color: #b4235b; }
-    .add-contact-button { min-height: 39px; padding: 0 15px; border: 0; border-radius: 6px; background: var(--accent); color: var(--white); font: 700 12px "DM Sans", sans-serif; cursor: pointer; }
+    .add-contact-button, .open-add-contact-button { min-height: 39px; padding: 0 15px; border: 0; border-radius: 6px; background: var(--accent); color: var(--white); font: 700 12px "DM Sans", sans-serif; cursor: pointer; }
     .add-contact-button:disabled { opacity: .65; cursor: wait; }
+    .cancel-add-contact-button, .contact-delete-button { min-height: 34px; padding: 0 11px; border: 1px solid var(--line); border-radius: 6px; background: var(--white); color: var(--ink); font: 600 12px "DM Sans", sans-serif; cursor: pointer; }
     .contacts-toolbar { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin: 30px 0 14px; }
+    .contacts-toolbar-actions { display: flex; align-items: center; gap: 14px; }
     .contact-count { margin: 0; color: var(--muted); font-size: 13px; }
+    .contact-page-status { min-height: 18px; margin: 0 0 8px; color: var(--muted); font-size: 12px; }
+    .contact-page-status.error { color: #b4235b; }
     .filters { display: flex; gap: 10px; }
     .filters label { display: grid; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 700; }
     .filters input, .filters select { min-width: 190px; background: white; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); padding: 9px 11px; font: 500 13px "DM Sans", sans-serif; }
@@ -33,11 +38,14 @@
     .status-badge { display: inline-block; padding: 5px 9px; border-radius: 20px; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 700; text-transform: capitalize; }
     .status-badge.unsubscribed { background: #f7d8e5; color: #852047; }
     .status-badge.pending { background: #f7e8f1; color: #744267; }
+    .contact-delete-button { border-color: #efc3d4; color: #852047; }
+    .contact-delete-button:disabled { opacity: .65; cursor: wait; }
     .empty-state { padding: 30px 18px; color: var(--muted); text-align: center; }
     @media (max-width: 760px) {
       .add-contact-fields { grid-template-columns: 1fr; }
-      .add-contact-card { padding: 16px; }
+      .add-contact-dialog { padding: 18px; }
       .contacts-toolbar { align-items: stretch; flex-direction: column; }
+      .contacts-toolbar-actions { justify-content: space-between; }
       .filters { flex-direction: column; }
       .filters input, .filters select { width: 100%; }
       th, td { padding-left: 13px; padding-right: 13px; }
@@ -49,7 +57,7 @@
   <h1>Contacts</h1>
   <p class="intro">Get to know your audience and their email preferences.</p>
 
-  <section class="add-contact-card" aria-labelledby="add-contact-heading">
+  <dialog class="add-contact-dialog" id="add-contact-dialog" aria-labelledby="add-contact-heading">
     <h2 id="add-contact-heading">Add a contact</h2>
     <p>Add one person to your audience.</p>
     <form id="add-contact-form">
@@ -71,14 +79,18 @@
       </div>
       <div class="add-contact-footer">
         <p class="contact-form-status" id="contact-form-status" role="status" aria-live="polite"></p>
+        <button class="cancel-add-contact-button" id="cancel-add-contact" type="button">Cancel</button>
         <button class="add-contact-button" type="submit">Add contact</button>
       </div>
     </form>
-  </section>
+  </dialog>
 
   <section aria-label="Contact list">
     <div class="contacts-toolbar">
-      <p class="contact-count" id="contact-count" aria-live="polite">{{ contacts|length }} contact{% if contacts|length != 1 %}s{% endif %}</p>
+      <div class="contacts-toolbar-actions">
+        <p class="contact-count" id="contact-count" aria-live="polite">{{ contacts|length }} contact{% if contacts|length != 1 %}s{% endif %}</p>
+        <button class="open-add-contact-button" id="open-add-contact" type="button">Add contact</button>
+      </div>
       <div class="filters">
         <label>Search contacts
           <input id="contact-search" type="search" aria-label="Search contacts" placeholder="Search name or email">
@@ -94,23 +106,25 @@
       </div>
     </div>
 
+    <p class="contact-page-status" id="contact-page-status" role="status" aria-live="polite"></p>
     <div class="table-card">
       <div class="table-scroll">
         <table aria-label="Contacts">
           <thead>
-            <tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Consent status</th></tr>
+            <tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Consent status</th><th scope="col">Actions</th></tr>
           </thead>
           <tbody id="contact-rows">
             {% for contact in contacts %}
-              <tr data-contact-name="{{ contact.first_name|lower }}" data-contact-email="{{ contact.email|lower }}" data-opt-in-status="{{ contact.opt_in_status }}">
+              <tr data-contact-id="{{ contact.id }}" data-contact-name="{{ contact.first_name|lower }}" data-contact-email="{{ contact.email|lower }}" data-contact-display-name="{{ contact.first_name }}" data-contact-display-email="{{ contact.email }}" data-opt-in-status="{{ contact.opt_in_status }}">
                 <td><span class="contact-name"><span class="avatar" aria-hidden="true">{{ contact.first_name[0]|upper }}</span>{{ contact.first_name }}</span></td>
                 <td class="contact-email">{{ contact.email }}</td>
                 <td><span class="status-badge {{ contact.opt_in_status }}">{{ contact.opt_in_status }}</span></td>
+                <td><button class="contact-delete-button" type="button" aria-label="Delete {{ contact.first_name }} ({{ contact.email }})">Delete</button></td>
               </tr>
             {% else %}
-              <tr id="empty-contacts"><td class="empty-state" colspan="3">No contacts yet. Add your first contact above.</td></tr>
+              <tr id="empty-contacts"><td class="empty-state" colspan="4">No contacts yet. Add your first contact.</td></tr>
             {% endfor %}
-            <tr id="no-results" hidden><td class="empty-state" colspan="3">No contacts match your filters.</td></tr>
+            <tr id="no-results" hidden><td class="empty-state" colspan="4">No contacts match your filters.</td></tr>
           </tbody>
         </table>
       </div>
@@ -121,9 +135,13 @@
 
 {% block scripts %}
   <script>
+    const addContactDialog = document.querySelector("#add-contact-dialog");
+    const openAddContactButton = document.querySelector("#open-add-contact");
+    const cancelAddContactButton = document.querySelector("#cancel-add-contact");
     const addContactForm = document.querySelector("#add-contact-form");
     const contactFormStatus = document.querySelector("#contact-form-status");
-    const addContactButton = addContactForm.querySelector("button");
+    const addContactButton = addContactForm.querySelector(".add-contact-button");
+    const contactPageStatus = document.querySelector("#contact-page-status");
     const contactRowsElement = document.querySelector("#contact-rows");
     const searchInput = document.querySelector("#contact-search");
     const statusFilter = document.querySelector("#status-filter");
@@ -154,8 +172,11 @@
 
     function createContactRow(contact) {
       const row = document.createElement("tr");
+      row.dataset.contactId = contact.id;
       row.dataset.contactName = contact.first_name.toLowerCase();
       row.dataset.contactEmail = contact.email.toLowerCase();
+      row.dataset.contactDisplayName = contact.first_name;
+      row.dataset.contactDisplayEmail = contact.email;
       row.dataset.optInStatus = contact.opt_in_status;
 
       const nameCell = document.createElement("td");
@@ -178,7 +199,15 @@
       status.textContent = contact.opt_in_status;
       statusCell.append(status);
 
-      row.append(nameCell, emailCell, statusCell);
+      const actionsCell = document.createElement("td");
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "contact-delete-button";
+      deleteButton.type = "button";
+      deleteButton.setAttribute("aria-label", `Delete ${contact.first_name} (${contact.email})`);
+      deleteButton.textContent = "Delete";
+      actionsCell.append(deleteButton);
+
+      row.append(nameCell, emailCell, statusCell, actionsCell);
       return row;
     }
 
@@ -199,9 +228,31 @@
       filterContacts();
     }
 
+    function showEmptyContacts() {
+      if (emptyContacts) return;
+      emptyContacts = document.createElement("tr");
+      emptyContacts.id = "empty-contacts";
+      const cell = document.createElement("td");
+      cell.className = "empty-state";
+      cell.colSpan = 4;
+      cell.textContent = "No contacts yet. Add your first contact.";
+      emptyContacts.append(cell);
+      contactRowsElement.insertBefore(emptyContacts, noResults);
+    }
+
+    openAddContactButton.addEventListener("click", () => {
+      contactFormStatus.textContent = "";
+      contactFormStatus.classList.remove("error");
+      addContactDialog.showModal();
+    });
+
+    cancelAddContactButton.addEventListener("click", () => addContactDialog.close());
+
     addContactForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const values = Object.fromEntries(new FormData(addContactForm).entries());
+      contactPageStatus.textContent = "";
+      contactPageStatus.classList.remove("error");
       contactFormStatus.classList.remove("error");
       contactFormStatus.textContent = "Adding contact...";
       addContactButton.disabled = true;
@@ -226,12 +277,48 @@
 
         addContactRow(result);
         addContactForm.reset();
-        contactFormStatus.textContent = `${result.first_name} was added to contacts.`;
+        addContactDialog.close();
+        contactPageStatus.textContent = `${result.first_name} was added to contacts.`;
       } catch (error) {
         contactFormStatus.classList.add("error");
         contactFormStatus.textContent = error instanceof Error ? error.message : "Unable to add contact.";
       } finally {
         addContactButton.disabled = false;
+      }
+    });
+
+    contactRowsElement.addEventListener("click", async (event) => {
+      const deleteButton = event.target.closest(".contact-delete-button");
+      if (!deleteButton) return;
+      const row = deleteButton.closest("tr[data-contact-id]");
+      if (!row) return;
+      const contactName = row.dataset.contactDisplayName;
+      const contactEmail = row.dataset.contactDisplayEmail;
+      if (!window.confirm(`Delete ${contactName} (${contactEmail})?`)) return;
+
+      contactPageStatus.textContent = "";
+      contactPageStatus.classList.remove("error");
+      deleteButton.disabled = true;
+      try {
+        const response = await fetch(`/contacts/${encodeURIComponent(row.dataset.contactId)}`, {
+          method: "DELETE",
+          headers: { "X-CSRF-Token": appCsrfToken }
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          if (response.status === 401) window.location.assign("/login?next=/contacts");
+          throw new Error(typeof result.detail === "string" ? result.detail : "Unable to delete contact.");
+        }
+
+        contactRows = contactRows.filter((contactRow) => contactRow !== row);
+        row.remove();
+        if (contactRows.length === 0) showEmptyContacts();
+        filterContacts();
+        contactPageStatus.textContent = `${contactName} was deleted from contacts.`;
+      } catch (error) {
+        contactPageStatus.classList.add("error");
+        contactPageStatus.textContent = error instanceof Error ? error.message : "Unable to delete contact.";
+        deleteButton.disabled = false;
       }
     });
 
