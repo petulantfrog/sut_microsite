@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Dot-Lite{% endblock %}</title>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { color-scheme: light; --ink: #301021; --muted: #765769; --paper: #fff5fa; --white: #fff; --accent: #e60073; --accent-soft: #ffe1ef; --line: #f1c5d9; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: "DM Sans", sans-serif; }
+    .app-shell { max-width: 1440px; min-height: 100vh; margin: 0 auto; display: grid; grid-template-columns: 220px minmax(0, 1fr); }
+    .sidebar { background: var(--white); border-right: 1px solid var(--line); padding: 28px 17px; display: flex; flex-direction: column; }
+    .brand { display: flex; gap: 12px; align-items: center; padding: 0 8px; color: var(--ink); text-decoration: none; font: 800 17px "Manrope", sans-serif; }
+    .brand-mark { width: 34px; height: 34px; border-radius: 9px; background: var(--accent); color: var(--white); display: grid; place-items: center; font-size: 19px; }
+    .brand-sub { color: var(--muted); font-weight: 500; }
+    .nav-label { margin: 43px 10px 11px; color: var(--muted); text-transform: uppercase; font-size: 10px; font-weight: 700; letter-spacing: .08em; }
+    .nav-links { display: grid; gap: 5px; }
+    .nav-link { display: flex; align-items: center; gap: 12px; min-height: 42px; padding: 0 11px; border-radius: 6px; color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 600; }
+    .nav-link:hover { background: var(--paper); color: var(--ink); }
+    .nav-link.is-active { background: var(--accent-soft); color: var(--accent); }
+    .nav-index { width: 20px; color: #bd91a7; font-size: 10px; font-weight: 700; }
+    .nav-link.is-active .nav-index { color: var(--accent); }
+    .workspace { min-width: 0; padding: 25px 38px 52px; }
+    .topbar { display: flex; align-items: center; justify-content: flex-end; min-height: 44px; border-bottom: 1px solid var(--line); padding-bottom: 19px; }
+    .topbar-actions { display: flex; align-items: center; gap: 10px; }
+    .sign-out-button { padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--white); color: var(--ink); font: 600 12px "DM Sans", sans-serif; cursor: pointer; }
+    .help-centre { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--white); color: var(--accent); font-size: 12px; font-weight: 600; }
+    .help-placeholder { color: var(--muted); font-size: 10px; font-weight: 500; }
+    .app-status { margin: 0; color: #b4235b; font-size: 11px; }
+    .page-content { padding-top: 37px; }
+    h1 { font: 700 36px "Manrope", sans-serif; letter-spacing: -.03em; margin: 8px 0 6px; }
+    .intro { color: var(--muted); margin: 0; }
+    @media (max-width: 760px) {
+      .app-shell { grid-template-columns: minmax(0, 1fr); }
+      .sidebar { border-right: 0; border-bottom: 1px solid var(--line); padding: 15px 18px 12px; }
+      .nav-label { display: none; }
+      .nav-links { display: flex; gap: 5px; margin-top: 12px; overflow-x: auto; }
+      .nav-link { white-space: nowrap; }
+      .workspace { padding: 18px 20px 36px; }
+      .page-content { padding-top: 30px; }
+      h1 { font-size: 30px; }
+    }
+  </style>
+  {% block styles %}{% endblock %}
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="Dot Lite home">
+        <span class="brand-mark" aria-hidden="true">d</span>
+        <span>dot <span class="brand-sub">/ lite</span></span>
+      </a>
+      <p class="nav-label">Workspace</p>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a class="nav-link{% if active_page == 'dashboard' %} is-active{% endif %}" href="/" {% if active_page == 'dashboard' %}aria-current="page"{% endif %}>
+          <span class="nav-index" aria-hidden="true">01</span>Dashboard
+        </a>
+        <a class="nav-link{% if active_page == 'contacts' %} is-active{% endif %}" href="/contacts" {% if active_page == 'contacts' %}aria-current="page"{% endif %}>
+          <span class="nav-index" aria-hidden="true">02</span>Contacts
+        </a>
+        <a class="nav-link{% if active_page == 'assistant' %} is-active{% endif %}" href="/assistant" {% if active_page == 'assistant' %}aria-current="page"{% endif %}>
+          <span class="nav-index" aria-hidden="true">03</span>AI assistant
+        </a>
+      </nav>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="topbar-actions">
+          <button class="sign-out-button" id="app-sign-out" type="button">Sign out</button>
+          <p class="app-status" id="app-status" role="status" aria-live="polite"></p>
+          <div class="help-centre"><span>Help centre</span><span class="help-placeholder">Coming soon</span></div>
+        </div>
+      </header>
+      <main class="page-content">{% block content %}{% endblock %}</main>
+    </div>
+  </div>
+  <script>
+    const appCsrfToken = {{ csrf_token|tojson }};
+    const appSignOut = document.querySelector("#app-sign-out");
+    const appStatus = document.querySelector("#app-status");
+
+    appSignOut.addEventListener("click", async () => {
+      appSignOut.disabled = true;
+      try {
+        const response = await fetch("/logout", {
+          method: "POST",
+          headers: { "X-CSRF-Token": appCsrfToken }
+        });
+        if (!response.ok) throw new Error("Unable to sign out.");
+        window.location.assign("/login");
+      } catch (error) {
+        appStatus.textContent = error instanceof Error ? error.message : "Unable to sign out.";
+        appSignOut.disabled = false;
+      }
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

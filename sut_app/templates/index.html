@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Dot-Lite | Commerce overview{% endblock %}
+
+{% block styles %}
+  <style>
+    .toolbar { margin: 30px 0 14px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .toolbar h2 { font: 700 16px "Manrope", sans-serif; margin: 0; }
+    .period-label { margin-right: 8px; color: var(--muted); font-size: 11px; font-weight: 700; }
+    select { background: white; border: 1px solid var(--line); color: var(--ink); border-radius: 6px; padding: 9px 32px 9px 12px; font: 600 13px "DM Sans", sans-serif; }
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .metric { background: var(--white); border: 1px solid var(--line); border-radius: 7px; padding: 19px 20px; min-height: 126px; }
+    .metric-label { color: var(--muted); font-size: 12px; font-weight: 600; }
+    .metric-value { font: 700 27px "Manrope", sans-serif; margin-top: 19px; }
+    .lower { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 32px; border-top: 1px solid var(--line); margin-top: 34px; padding-top: 25px; }
+    .lower h2 { font: 700 15px "Manrope", sans-serif; margin: 0 0 9px; }
+    .lower p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
+    .accent { color: var(--accent); font-weight: 700; }
+    @media (max-width: 760px) {
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .lower { grid-template-columns: 1fr; gap: 22px; }
+    }
+    @media (max-width: 380px) {
+      .metrics { grid-template-columns: 1fr; }
+      .metric { min-height: 100px; }
+      .metric-value { margin-top: 10px; }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <h1>Good morning, team.</h1>
+  <p class="intro">A clear view of your customer activity and sales performance.</p>
+  <section aria-labelledby="performance-heading">
+    <div class="toolbar">
+      <h2 id="performance-heading">Performance</h2>
+      <label><span class="period-label">Period</span>
+        <select name="days" aria-label="Reporting period" hx-get="/dashboard/kpis" hx-target="#kpi-values" hx-trigger="change" hx-include="#sku-prefix">
+          <option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="all">All time</option>
+        </select>
+      </label>
+    </div>
+    <input id="sku-prefix" type="hidden" name="sku_prefix" value="{{ sku_prefix }}">
+    <div id="kpi-values" class="metrics" hx-get="/dashboard/kpis?days=30{% if sku_prefix %}&amp;sku_prefix={{ sku_prefix|urlencode }}{% endif %}" hx-trigger="load" hx-swap="innerHTML" aria-live="polite">
+      <div class="metric"><div class="metric-label">Total sales</div><div class="metric-value">$0.00</div></div>
+      <div class="metric"><div class="metric-label">Orders</div><div class="metric-value">0</div></div>
+      <div class="metric"><div class="metric-label">Unique customers</div><div class="metric-value">0</div></div>
+      <div class="metric"><div class="metric-label">Average order value</div><div class="metric-value">$0.00</div></div>
+    </div>
+  </section>
+  <div class="lower">
+    <section><h2>Customer relationships</h2><p>Bring your audience together with thoughtful messaging and a dependable view of consent status.</p></section>
+    <section><h2>Today's signal</h2><p>Performance updates as your order activity comes in. <span class="accent">Keep building momentum.</span></p></section>
+  </div>
+{% endblock %}

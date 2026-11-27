@@ -1,0 +1,44 @@
+name: deploy-hostinger-vps
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sut_app/**"
+      - ".github/workflows/deploy-hostinger.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate deployment configuration
+        env:
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
+          HOSTINGER_USER: ${{ secrets.HOSTINGER_USER }}
+          HOSTINGER_SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+          HOSTINGER_KNOWN_HOSTS: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
+          HOSTINGER_APP_DIR: ${{ secrets.HOSTINGER_APP_DIR }}
+        run: |
+          if [ -z "$HOSTINGER_HOST" ] || [ -z "$HOSTINGER_USER" ] || [ -z "$HOSTINGER_SSH_KEY" ] || [ -z "$HOSTINGER_KNOWN_HOSTS" ] || [ -z "$HOSTINGER_APP_DIR" ]; then
+            echo "Configure all HOSTINGER_* repository secrets before deploying."
+            exit 1
+          fi
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HOSTINGER_SSH_KEY }}
+      - name: Add verified VPS host key
+        env:
+          HOSTINGER_KNOWN_HOSTS: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$HOSTINGER_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Pull and restart application
+        env:
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
+          HOSTINGER_USER: ${{ secrets.HOSTINGER_USER }}
+          HOSTINGER_APP_DIR: ${{ secrets.HOSTINGER_APP_DIR }}
+        run: >-
+          ssh "$HOSTINGER_USER@$HOSTINGER_HOST"
+          "cd '$HOSTINGER_APP_DIR' && git pull --ff-only origin main && docker compose --env-file sut_app/.env -f sut_app/compose.yaml up -d --build"

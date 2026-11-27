@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+*.sqlite3
+.env
+.pytest_cache/
+.venv/
+sut_app/.env
+sut_app/data/
+playwright-report/

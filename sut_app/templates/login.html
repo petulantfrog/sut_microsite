@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dot-Lite | Sign in</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { color-scheme: light; --ink: #301021; --muted: #765769; --paper: #fff5fa; --white: #fff; --accent: #e60073; --line: #f1c5d9; }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 22px; background: var(--paper); color: var(--ink); font-family: "DM Sans", sans-serif; }
+    .login-card { width: min(100%, 420px); padding: 32px; border: 1px solid var(--line); border-radius: 9px; background: var(--white); }
+    .brand { display: flex; align-items: center; gap: 11px; color: var(--ink); text-decoration: none; font: 800 17px "Manrope", sans-serif; }
+    .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; background: var(--accent); color: white; font-size: 19px; }
+    h1 { margin: 30px 0 7px; font: 700 27px "Manrope", sans-serif; }
+    .intro, .configuration-error { color: var(--muted); font-size: 13px; line-height: 1.6; }
+    form { display: grid; gap: 16px; margin-top: 24px; }
+    label { display: grid; gap: 7px; font-size: 12px; font-weight: 700; }
+    input { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); font: 500 14px "DM Sans", sans-serif; }
+    button { min-height: 43px; border: 0; border-radius: 6px; background: var(--accent); color: white; font: 700 13px "DM Sans", sans-serif; cursor: pointer; }
+    button:disabled { opacity: .65; cursor: wait; }
+    .error { min-height: 18px; margin: 0; color: #b4235b; font-size: 12px; }
+    .back-link { display: inline-block; margin-top: 20px; color: var(--accent); font-size: 12px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <main class="login-card">
+    <a class="brand" href="/" aria-label="Dot Lite home">
+      <span class="brand-mark" aria-hidden="true">d</span>
+      <span>dot / lite</span>
+    </a>
+    <h1>Sign in to Dot-Lite</h1>
+    {% if configured %}
+      <p class="intro">Use your workspace credentials to continue.</p>
+      <form id="login-form" data-next-path="{{ next_path }}">
+        <label for="username">Username
+          <input id="username" name="username" autocomplete="username" required>
+        </label>
+        <label for="password">Password
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <p id="login-error" class="error" role="alert"></p>
+        <button type="submit">Sign in</button>
+      </form>
+    {% else %}
+      <p class="configuration-error" role="alert">App sign-in is not configured. Set <code>ASSISTANT_USERNAME</code>, <code>ASSISTANT_PASSWORD</code>, and <code>ASSISTANT_SESSION_SECRET</code> (at least 32 characters) in the app environment, then restart the app.</p>
+    {% endif %}
+    <a class="back-link" href="/">Back to dashboard</a>
+  </main>
+  {% if configured %}
+    <script>
+      const loginForm = document.querySelector("#login-form");
+      const loginError = document.querySelector("#login-error");
+      const loginButton = loginForm.querySelector("button");
+
+      loginForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        loginError.textContent = "";
+        loginButton.disabled = true;
+        try {
+          const response = await fetch("/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username: loginForm.elements.username.value,
+              password: loginForm.elements.password.value,
+              next_path: loginForm.dataset.nextPath
+            })
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.detail || "Unable to sign in.");
+          window.location.assign(result.next || "/");
+        } catch (error) {
+          loginError.textContent = error instanceof Error ? error.message : "Unable to sign in.";
+        } finally {
+          loginButton.disabled = false;
+        }
+      });
+    </script>
+  {% endif %}
+</body>
+</html>

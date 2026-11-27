@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Dot-Lite | AI assistant{% endblock %}
+
+{% block styles %}
+  <style>
+    .assistant-heading { display: flex; justify-content: space-between; align-items: start; gap: 20px; }
+    .assistant-heading h1 { margin-top: 8px; }
+    .chat-card { max-width: 860px; margin-top: 28px; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--white); }
+    .chat-header { padding: 17px 20px; border-bottom: 1px solid var(--line); }
+    .chat-header h2 { margin: 0 0 5px; font: 700 15px "Manrope", sans-serif; }
+    .chat-header p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .conversation { min-height: 210px; max-height: 440px; overflow-y: auto; display: grid; align-content: start; gap: 12px; padding: 20px; }
+    .message { width: fit-content; max-width: min(88%, 620px); padding: 12px 14px; border-radius: 8px; }
+    .message p { margin: 0; font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .message-label { display: block; margin-bottom: 4px; font-size: 10px; font-weight: 700; }
+    .assistant-message { background: var(--paper); }
+    .user-message { justify-self: end; background: var(--accent-soft); color: var(--accent); }
+    .composer { padding: 18px 20px; border-top: 1px solid var(--line); background: var(--paper); }
+    .brief-fields { display: grid; grid-template-columns: 1fr 1.2fr .8fr; gap: 11px; }
+    .brief-fields label { display: grid; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 700; }
+    .brief-fields input { min-width: 0; padding: 10px 11px; border: 1px solid var(--line); border-radius: 6px; background: white; color: var(--ink); font: 500 13px "DM Sans", sans-serif; }
+    .composer-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 13px; }
+    .chat-status { min-height: 18px; color: var(--muted); font-size: 11px; }
+    .chat-status.error { color: #b4235b; }
+    .generate-button { min-height: 39px; padding: 0 15px; border: 0; border-radius: 6px; background: var(--accent); color: white; font: 700 12px "DM Sans", sans-serif; cursor: pointer; }
+    .generate-button:disabled { opacity: .65; cursor: wait; }
+    @media (max-width: 760px) {
+      .assistant-heading { align-items: center; }
+      .brief-fields { grid-template-columns: 1fr; }
+      .conversation { padding: 15px; }
+      .composer { padding: 15px; }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="assistant-heading">
+    <div>
+      <h1>AI copy assistant</h1>
+      <p class="intro">Share a few campaign details and get a short piece of marketing copy.</p>
+    </div>
+  </div>
+
+  <section class="chat-card" aria-label="AI copy assistant">
+    <div class="chat-header">
+      <h2>Campaign chat</h2>
+      <p>Copy uses your configured AI service when available. Without an AI key, a local preview response is returned.</p>
+    </div>
+    <div class="conversation" id="conversation" role="log" aria-label="Conversation" aria-live="polite">
+      <article class="message assistant-message">
+        <span class="message-label">Assistant</span>
+        <p>Hi! Tell me about your product, who it is for, and the discount code you want to share.</p>
+      </article>
+    </div>
+    <form class="composer" id="copy-form">
+      <div class="brief-fields">
+        <label for="product-name">Product
+          <input id="product-name" name="product_name" maxlength="120" placeholder="Everyday tote" required>
+        </label>
+        <label for="audience">Audience
+          <input id="audience" name="audience" maxlength="160" placeholder="People who love weekend trips" required>
+        </label>
+        <label for="discount-code">Discount code
+          <input id="discount-code" name="discount_code" maxlength="40" pattern="[A-Za-z0-9_\-]+" placeholder="WEEKEND10" required>
+        </label>
+      </div>
+      <div class="composer-footer">
+        <p class="chat-status" id="chat-status" role="status" aria-live="polite"></p>
+        <button class="generate-button" type="submit">Generate copy</button>
+      </div>
+    </form>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const csrfToken = {{ csrf_token|tojson }};
+    const copyForm = document.querySelector("#copy-form");
+    const conversation = document.querySelector("#conversation");
+    const chatStatus = document.querySelector("#chat-status");
+    const generateButton = copyForm.querySelector("button");
+
+    function addMessage(label, text, className) {
+      const message = document.createElement("article");
+      message.className = `message ${className}`;
+      const messageLabel = document.createElement("span");
+      messageLabel.className = "message-label";
+      messageLabel.textContent = label;
+      const messageText = document.createElement("p");
+      messageText.textContent = text;
+      message.append(messageLabel, messageText);
+      conversation.append(message);
+      conversation.scrollTop = conversation.scrollHeight;
+    }
+
+    copyForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const values = Object.fromEntries(new FormData(copyForm).entries());
+      const brief = `Write copy for ${values.product_name}, for ${values.audience}, using code ${values.discount_code}.`;
+      addMessage("You", brief, "user-message");
+      chatStatus.classList.remove("error");
+      chatStatus.textContent = "Generating copy...";
+      generateButton.disabled = true;
+
+      try {
+        const response = await fetch("/assistant/generate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfToken
+          },
+          body: JSON.stringify(values)
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          if (response.status === 401) window.location.assign("/login");
+          throw new Error(result.detail || "Unable to generate copy.");
+        }
+        addMessage(result.model === "openai" ? "AI assistant" : "Preview response", result.copy, "assistant-message");
+        chatStatus.textContent = result.model === "openai" ? "Generated with your AI service." : "Showing a local preview response.";
+      } catch (error) {
+        chatStatus.classList.add("error");
+        chatStatus.textContent = error instanceof Error ? error.message : "Unable to generate copy.";
+      } finally {
+        generateButton.disabled = false;
+      }
+    });
+
+  </script>
+{% endblock %}
